@@ -1,0 +1,33 @@
+__pycache__/
+
+# environment
+.env
+
+#mamaba
+py311_data_prep/
+
+# data
+data/raw/
+data/processed/
+data/intermediate/
+*.csv
+*.npy
+*.h5
+*.pkl
+
+# models
+models/
+
+#pics
+reporting/pics
+
+#IDE
+.vscode/
+
+# Jupyter
+notebooks/*.ipynb_checkpoints
+.ipynb_checkpoints/
+
+# Tensorman
+tensorman/*.log
+tensorman/*.cache
