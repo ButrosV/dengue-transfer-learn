@@ -1,0 +1,15 @@
+services:
+  dengue-tf:
+    build:
+      context: .
+      dockerfile: tensorman/Dockerfile
+    image: dengue-tf212:v1
+    runtime: nvidia  # GPU access (requires NVIDIA Container Toolkit)
+    volumes:
+      - .:/workspace
+    ports:
+      - "8888:8888"  # Jupyter access
+    stdin_open: true
+    tty: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all  # Expose ALL GPUs (one on my device)
