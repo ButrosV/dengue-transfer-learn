@@ -1,0 +1,16 @@
+data:
+  dirs:
+    main: "data"
+    raw: "data/raw"
+  files:
+    raw:
+      features_train: "dengue_features_train.csv" 
+      features_test: "dengue_features_test.csv"
+      labels_train: "dengue_labels_train.csv"
+# populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
+model:
+  learning_rate: 0.001
+  batch_size: 32
+  epochs: 10
+
+
