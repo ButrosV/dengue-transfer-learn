@@ -31,3 +31,6 @@ notebooks/*.ipynb_checkpoints
 # Tensorman
 tensorman/*.log
 tensorman/*.cache
+
+# notes
+scratchpad*
