@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
-from typing import List
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -50,15 +50,20 @@ def compute_correlations_matrix(data: pd.DataFrame,
 
 def display_distributions(data: pd.DataFrame, features: List[str],
                           fig_width: int = 17,
+                          x_range: Tuple[int,int] | None = None,
                           title_prefix: str=None) -> None:
-    """Display distribution graphs for specified categorical columns.
-    Graphs are displayed as a vertical stack of box plots.
+    """Display distribution graphs for specified numerical features.
+    All subplots share the same x-axis scale.
     :param data: DataFrames with numerical categories for visualization.
     :param features: list of column names/features  from 'data' Dataframe.
+    :param x_range: Optional tuple (min, max) to set uniform x-axis limits 
+                across all subplots (default: None, auto-scaled).
     :param title_prefix: Optional, prefix for visualization title.
     """
     n_subplots = len(features) * 2
-    fig, axs = plt.subplots(nrows=n_subplots, figsize = (fig_width, n_subplots * 2))
+    fig, axs = plt.subplots(nrows=n_subplots, figsize = (fig_width, n_subplots * 2), 
+                            sharex=True
+                           )                   
     index = 0
     for feature in features:
         sns.boxenplot(data=data, x=data[feature],
@@ -66,12 +71,15 @@ def display_distributions(data: pd.DataFrame, features: List[str],
         sns.kdeplot(data=data, x=data[feature], fill=True,
                     color=random_color(), ax=axs[index + 1])
         index += 2
-
+        
     if title_prefix is not None:
         fig.suptitle(f"{title_prefix} feature distribution analysis.", fontsize=18,
                     fontweight='bold', y=0.98)
     else:
         fig.suptitle("Feature distribution analysis.", fontsize=18,
                     fontweight='bold', y=0.98)
-    fig.tight_layout();
 
+    if x_range is not None:
+        axs[0].set_xlim(x_range)
+        
+    fig.tight_layout();
