@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -17,6 +17,15 @@ def random_color():
     random_num = random.randint(0, color_count - 1)
     rand_col = mcolors.get_named_colors_mapping()[color_names[random_num]]
     return rand_col
+
+
+def random_colormap():
+    """
+    get random matplot-lib colourmap - just for fun
+    """
+    c_maps = plt.colormaps()
+    random_num = random.randint(0, len(c_maps) - 1)
+    return c_maps[random_num]
 
 
 def compute_correlations_matrix(data: pd.DataFrame,
@@ -50,12 +59,15 @@ def compute_correlations_matrix(data: pd.DataFrame,
 
 def display_distributions(data: pd.DataFrame, features: List[str],
                           fig_width: int = 17,
+                          hue_palette: Tuple[str | None, Any | None] = (None, None),
                           x_range: Tuple[int,int] | None = None,
                           title_prefix: str=None) -> None:
     """Display distribution graphs for specified numerical features.
     All subplots share the same x-axis scale.
     :param data: DataFrames with numerical categories for visualization.
     :param features: list of column names/features  from 'data' Dataframe.
+    :param hue_palette: Coloring by category. Use (None, None) for no hue 
+                coloring (default).
     :param x_range: Optional tuple (min, max) to set uniform x-axis limits 
                 across all subplots (default: None, auto-scaled).
     :param title_prefix: Optional, prefix for visualization title.
@@ -67,9 +79,13 @@ def display_distributions(data: pd.DataFrame, features: List[str],
     index = 0
     for feature in features:
         sns.boxenplot(data=data, x=data[feature],
-                      color=random_color(), ax=axs[index])
+                      hue=hue_palette[0],
+                      palette=hue_palette[1], color=random_color(), 
+                      ax=axs[index])
         sns.kdeplot(data=data, x=data[feature], fill=True,
-                    color=random_color(), ax=axs[index + 1])
+                      hue=hue_palette[0], palette=hue_palette[1],
+                    color=random_color(), 
+                    ax=axs[index + 1])
         index += 2
         
     if title_prefix is not None:
