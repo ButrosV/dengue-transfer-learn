@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import seaborn as sns
 
+from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
 
 def random_color():
     """
@@ -19,19 +20,26 @@ def random_color():
     return rand_col
 
 
-def random_colormap():
+def random_colormap(seaborn: bool = False, n_colors: int = 6):
     """
     get random matplot-lib colourmap - just for fun
+    :param seaborn: set to True if if use with seaborn
+    :param n_colors: also for seaborn palette - how many colors to use
+                    Default 6 is also seaborn default. 
+                    For hues use category count.
     """
     c_maps = plt.colormaps()
-    random_num = random.randint(0, len(c_maps) - 1)
-    return c_maps[random_num]
+    random_cmap_name = random.choice(c_maps)
+    if not seaborn:
+        return random_cmap_name
+    else:
+        return sns.color_palette(random_cmap_name, n_colors=n_colors)
 
 
 def compute_correlations_matrix(data: pd.DataFrame,
                                annot: bool = False,
                                figsize: tuple = (17, 5),
-                                cmap:str = "PuBuGn"):
+                                cmap: str = "PuBuGn"):
     """
     Compute and display a heatmap of the correlation matrix for numerical features.    
     :param data: pandas DataFrame containing the input data.
@@ -61,7 +69,7 @@ def display_distributions(data: pd.DataFrame, features: List[str],
                           fig_width: int = 17,
                           hue_palette: Tuple[str | None, Any | None] = (None, None),
                           x_range: Tuple[int,int] | None = None,
-                          title_prefix: str=None) -> None:
+                          title_prefix: str | None =None) -> None:
     """Display distribution graphs for specified numerical features.
     All subplots share the same x-axis scale.
     :param data: DataFrames with numerical categories for visualization.
@@ -99,3 +107,54 @@ def display_distributions(data: pd.DataFrame, features: List[str],
         axs[0].set_xlim(x_range)
         
     fig.tight_layout();
+
+
+def display_timeseries(data: pd.DataFrame, x: str, y: str,
+                        hue: str | None = None, grid: bool = True,
+                        month_ticks: Tuple[int, ...] = (1,4,7,10),
+                        title_prefix: str | None = None) -> None:
+    """
+    Display timeseries line plots for specified features.
+    All subplots share the same x-axis scale.
+    
+    :param data: DataFrame with numerical categories for visualization.
+    :param x: Column name for x-axis (datetime).
+    :param y: Column name for y-axis.
+    :param hue: Optional column name for hue coloring (default: None).
+    :param grid: Whether to show grid lines (default: True).
+    :param month_ticks: Tuple of month numbers for minor x-axis ticks (default: (1,4,7,10) quarterly).
+    :param title_prefix: Optional, prefix for visualization title.
+    """
+    
+    fig, ax = plt.subplots(figsize=(19, 5))
+    sns.lineplot(data=data, x=x, y=y, hue=hue)
+    # # Configure x-axis ticks (quarterly minors, yearly majors)
+    ax.xaxis.set(major_locator=YearLocator(),
+                 minor_locator=MonthLocator(bymonth=month_ticks),
+                 minor_formatter=(DateFormatter(fmt="%b")))
+        
+    # Style ticks
+    ax.tick_params(axis='x', which="major", pad=20, length=20,
+                   colors=random_color()  # remove for cleanup
+                  )
+    ax.tick_params(axis='x', which="minor", labelrotation=60,
+                  colors=random_color()  # remove for cleanup
+                  )
+    
+    # Grid styling
+    if grid:
+        plt.grid(alpha=0.7,
+            linestyle="dashed",
+            color=random_color()  # remove for cleanup
+        )
+        plt.grid(alpha=0.5, axis='x', which="minor", linestyle="dotted",
+                color=random_color()  # remove for cleanup
+                )
+
+    if title_prefix is not None:
+        plt.title(f"{title_prefix} distribution over time.",
+                    fontsize=13, fontweight="bold");
+    else:
+        plt.title("Target distribution over time.",
+                 fontsize=13, fontweight="bold");
+    
