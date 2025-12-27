@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Any
+from typing import Any, Iterable
 
 
 def top_correlations(data: pd.DataFrame, corr_threshold:float=0.95) -> pd.Series:
@@ -19,31 +19,34 @@ def top_correlations(data: pd.DataFrame, corr_threshold:float=0.95) -> pd.Series
 
 
 
-def value_streaks(data: pd.DataFrame, column: str, value: Any, run_threshold: int = 0
+def value_streaks(data: pd.DataFrame, column: str, value: Any | Iterable[Any], run_threshold: int = 1
                     ) -> pd.DataFrame:
     """
-    Identify and return streaks of specified values (including NaN) in a specified 
+    Identify and return streaks of specified values (single or multiple, including NaN) in a specified 
     column exceeding a minimum length threshold.
+    Supports both single values and iterables (list, tuple, set, range) for streak detection.
     
     **Usage Example:**
     ```
-    # Check for streaks of 0
+    # Check for single or multiple value streaks
     result = value_streaks(df, "total_cases", 0, run_threshold=5)
-    result = value_streaks(df, "ndvi_ne", run_threshold=5)
-    df["ndvi_ne"].iloc[result["first_pos"]:result["last_pos"] + 1]  # Extract 2nd NaN streak
+    result = value_streaks(df, "total_cases", range(2), run_threshold=5)
+    result = value_streaks(df, "ndvi_ne", np.nan, run_threshold=5)
+    df["ndvi_ne"].iloc[result["first_pos"][0]:result["last_pos"][0] + 1]  # Extract longest streak
     ```
     
     :param data: pandas DataFrame containing the input dataset.
-    :param column: Name of the column to analyze for NaN streaks.
-    :param value: Value to detect streaks of (use `np.nan` for NaN streaks).
-    :param run_threshold: Minimum streak length to include. Default is 0 (includes all streaks).
+    :param column: Name of the column to analyze for consecutive value streaks.
+    :param value: Single value or iterable of values to detect streaks of 
+                  (use `np.nan` for NaN streaks).
+    :param run_threshold: Minimum streak length to include. 
+                    Default is 1 (includes 2 consecutive value streaks).
     :return: A pandas DataFrame with columns 'first_pos', 'last_pos', and 'streak_len' 
                 for qualifying NaN streaks, sorted by length descending.
     """
-    if pd.isna(value):
-        mask_sequences = data[column].isna()
-    else:
-        mask_sequences = data[column] == value
+    if not isinstance(value, (list, tuple, set, range)):
+        value  = [value]
+    mask_sequences = data[column].isin(value)
     
     run_boundaries = mask_sequences != mask_sequences.shift()  # shift by one  + `!=` indicates where runs of equal values start/end
     run_boundaries = run_boundaries.cumsum()  # asign numeric value to each run sequence (previous sequence+=1)
