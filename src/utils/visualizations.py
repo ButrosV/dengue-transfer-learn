@@ -112,6 +112,7 @@ def display_distributions(data: pd.DataFrame, features: List[str],
 def display_timeseries(data: pd.DataFrame, x: str, y: str,
                         hue: str | None = None, grid: bool = True,
                         month_ticks: Tuple[int, ...] = (1,4,7,10),
+                        shift: int | None = None,
                         title_prefix: str | None = None) -> None:
     """
     Display timeseries line plots for specified features.
@@ -122,12 +123,18 @@ def display_timeseries(data: pd.DataFrame, x: str, y: str,
     :param y: Column name for y-axis.
     :param hue: Optional column name for hue coloring (default: None).
     :param grid: Whether to show grid lines (default: True).
+    :param shift: Optional number of weekly periods to shift the time axis 
+        for an overlaid comparison line.
     :param month_ticks: Tuple of month numbers for minor x-axis ticks (default: (1,4,7,10) quarterly).
     :param title_prefix: Optional, prefix for visualization title.
     """
     
     fig, ax = plt.subplots(figsize=(19, 5))
     sns.lineplot(data=data, x=x, y=y, hue=hue)
+    if shift is not None:
+        shifted_data = data[[x, y, hue]]
+        shifted_data[x] = shifted_data[x] + pd.Timedelta(52, "W")
+        sns.lineplot(data=shifted_data, x=x, y=y, hue=hue, linestyle=":")
     # # Configure x-axis ticks (quarterly minors, yearly majors)
     ax.xaxis.set(major_locator=YearLocator(),
                  minor_locator=MonthLocator(bymonth=month_ticks),
