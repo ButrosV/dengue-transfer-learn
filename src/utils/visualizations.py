@@ -97,7 +97,7 @@ def display_distributions(data: pd.DataFrame, features: List[str],
         index += 2
         
     if title_prefix is not None:
-        fig.suptitle(f"{title_prefix} feature distribution analysis.", fontsize=18,
+        fig.suptitle(f"{title_prefix.capitalize()} feature distribution analysis.", fontsize=18,
                     fontweight='bold', y=0.98)
     else:
         fig.suptitle("Feature distribution analysis.", fontsize=18,
@@ -159,7 +159,7 @@ def display_timeseries(data: pd.DataFrame, x: str, y: str,
                 )
 
     if title_prefix is not None:
-        plt.title(f"{title_prefix} distribution over time.",
+        plt.title(f"{title_prefix.capitalize()} distribution over time.",
                     fontsize=13, fontweight="bold");
     else:
         plt.title("Target distribution over time.",
