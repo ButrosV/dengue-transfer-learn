@@ -1,12 +1,12 @@
 from __future__ import annotations  # For forward refs like 'ProjectConfig'
 from pydantic import BaseModel
 from pathlib import Path
-from typing import Dict, Any, ClassVar
+from typing import Dict, Any, ClassVar, List
 import yaml
 
 
 def _nested_dict_valuesearch(dict_in: dict[str, Any], 
-    dict_out: dict[str, Any], value_type=type[str]) -> None:
+    dict_out: Dict[str, Any], value_type=type[str]) -> None:
     """
     Recursively extract all values of specified type from nested dictionary.
     Adding keys with matching value types to output dict.
@@ -24,8 +24,8 @@ def _nested_dict_valuesearch(dict_in: dict[str, Any],
 
 class DataConfig(BaseModel):
     """Configuration for data directories and filenames."""
-    dirs: dict[str, Path]
-    files: dict[str, Path]
+    dirs: Dict[str, Path]
+    files: Dict[str, Path]
     
 
     class Config:
@@ -35,6 +35,16 @@ class DataConfig(BaseModel):
         arbitrary_types_allowed = True
         extra = "allow"
 
+class PreprocesConfig(BaseModel):
+    """Configuration for model preprocessing variables."""
+    feature_groups: Dict[str, Any]
+
+
+    class Config:
+       """For non-defineed params, if found in config.yaml - free form, no type enforcment."""
+       extra = "allow"
+
+
 class ModelConfig(BaseModel):
     """Configuration for model training hyperparameters."""
     learning_rate: float
@@ -43,7 +53,7 @@ class ModelConfig(BaseModel):
 
 
     class Config:
-       """For non-defineed params, if found in sonfig.yaml - free form, no type enforcment."""
+       """For non-defineed params, if found in config.yaml - free form, no type enforcment."""
        extra = "allow"
 
 
@@ -51,6 +61,7 @@ class ProjectConfig(BaseModel):
     """Top-level project configuration combining data and model settings."""
     data: DataConfig
     model: ModelConfig
+    preprocess: PreprocesConfig
 
     CONFIG_RELATIVE: ClassVar[str] = "config.yaml"
     """Default relative path to YAML config from project root.

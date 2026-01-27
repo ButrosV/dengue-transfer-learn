@@ -7,6 +7,12 @@ data:
       features_train: "dengue_features_train.csv" 
       features_test: "dengue_features_test.csv"
       labels_train: "dengue_labels_train.csv"
+preprocess:
+  feature_groups:
+     env_prefixes: ["ndvi_", "reanalysis_", "station_", "precip_"]
+     temporal: ["year", "weekofyear", "week_start_date"]
+     city: "city"
+     target: "total_cases"
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001
