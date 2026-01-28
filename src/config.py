@@ -38,6 +38,8 @@ class DataConfig(BaseModel):
 class PreprocesConfig(BaseModel):
     """Configuration for model preprocessing variables."""
     feature_groups: Dict[str, Any]
+    outlier_perc: Dict[str, float]
+    nan_threshold: float
 
 
     class Config:
