@@ -1,4 +1,5 @@
 import pandas as pd
+import itertools
 from typing import List, Dict, Any
 from src.config import ProjectConfig
 
@@ -95,4 +96,43 @@ def median_groupwise_impute(X: pd.DataFrame,
             .groupby(by=group_keys)[cols_with_nan]\
             .transform(lambda group: group.fillna(group.median()))
     return X_no_nan
+    
+    
+def reduce_features(X: pd.DataFrame, 
+                    input_feat_groups: List[List[str]]=None,
+                    output_feat_names: List[str]=None,
+                   function: str=None):
+    """
+    Aggregate multiple feature groups into single reduced features using specified function.
+    Combine input features and drop originals.
+    
+    :param X: Input pandas DataFrame.
+    :param input_feat_groups: List of feature group lists to aggregate. Default None uses 
+           config.yaml settings (e.g., [['ndvi_ne', 'ndvi_nw']]).
+    :param output_feat_names: Output column names for aggregated features. Default None uses 
+           config.yaml settings (e.g., ['ndvi_north']).
+    :param function: Aggregation function string ('mean', 'sum', 'median'). Default None uses 
+           config.yaml settings (e.g 'mean').
+    :return: DataFrame with reduced features. Original input columns dropped.
+    """
+    X_reduced = X.copy()
+    if input_feat_groups is None:
+        input_feat_groups = cnfg.preprocess.combine_features["input_groups"]
+    if output_feat_names is None:
+        output_feat_names = cnfg.preprocess.combine_features["output_names"]
+    if function is None:
+        function = cnfg.preprocess.combine_features["aggregation"]
+
+        
+    if not len(input_feat_groups) == len(output_feat_names):
+        raise ValueError(f"Input feature groups {input_feat_groups} mismatch target keys {output_feat_names}")
+    missing_features = set(itertools.chain(*input_feat_groups)) - set(X.columns)
+    if missing_features:
+        raise ValueError(f"No {missing_features} features in input dataframe columns: {X.columns}")
+
+    for name, group in zip(output_feat_names, input_feat_groups):
+        X_reduced[name] = X_reduced[group].agg(function, axis=1)
+        X_reduced.drop(columns=group, inplace=True)
+        
+    return X_reduced
     

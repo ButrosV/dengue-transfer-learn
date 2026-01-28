@@ -9,15 +9,21 @@ data:
       labels_train: "dengue_labels_train.csv"
 preprocess:
   feature_groups:
-     env_prefixes: ["ndvi_", "reanalysis_", "station_", "precip"]
-     temporal: ["year", "weekofyear", "week_start_date"]
-     city: "city"
-     week: "weekofyear"
-     target: "total_cases"
+    env_prefixes: ["ndvi_", "reanalysis_", "station_", "precip"]
+    temporal: ["year", "weekofyear", "week_start_date"]
+    city: "city"
+    week: "weekofyear"
+    target: "total_cases"
   outlier_perc:
     lower: 0.01
     upper: 0.99
   nan_threshold: 0.5
+  combine_features:
+    input_groups: 
+      - ["ndvi_ne", "ndvi_nw"]
+      - ["ndvi_se","ndvi_sw"]
+    output_names: ["ndvi_north","ndvi_south"]
+    aggregation: "mean"
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001

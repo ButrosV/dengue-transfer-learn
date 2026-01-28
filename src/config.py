@@ -40,6 +40,7 @@ class PreprocesConfig(BaseModel):
     feature_groups: Dict[str, Any]
     outlier_perc: Dict[str, float]
     nan_threshold: float
+    combine_features: Dict[str, Any]
 
 
     class Config:
