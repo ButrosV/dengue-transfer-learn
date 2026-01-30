@@ -24,6 +24,15 @@ preprocess:
       - ["ndvi_se","ndvi_sw"]
     output_names: ["ndvi_north","ndvi_south"]
     aggregation: "mean"
+  multicolinear:
+    removal_list:
+      - "reanalysis_sat_precip_amt_mm"
+      - "reanalysis_dew_point_temp_k"
+      - "reanalysis_air_temp_k"
+      - "reanalysis_specific_humidity_g_per_kg"
+      - "reanalysis_avg_temp_k"
+      - "reanalysis_max_air_temp_k"
+      - "reanalysis_min_air_temp_k"
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001

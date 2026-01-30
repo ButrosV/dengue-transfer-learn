@@ -41,6 +41,7 @@ class PreprocesConfig(BaseModel):
     outlier_perc: Dict[str, float]
     nan_threshold: float
     combine_features: Dict[str, Any]
+    multicolinear: Dict[str, List[str]]
 
 
     class Config:

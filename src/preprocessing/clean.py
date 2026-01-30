@@ -1,9 +1,25 @@
 import pandas as pd
 import itertools
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Iterable
 from src.config import ProjectConfig
 
 cnfg = ProjectConfig.load_configuration()
+
+
+def _check_feature_presence(target_list: Iterable[str], source_list: Iterable[str]) -> None:
+    """
+    Validate that all required features exist in source column list.
+    :param target_list: Iterable of required feature names to check for.
+    :param source_list: Iterable of available column names from input DataFrame.
+    :return: None. Raises ValueError if any required features are missing.
+    """
+    if isinstance(target_list, str):
+        target_list = [target_list]
+    if isinstance(source_list, str):
+        source_list = [source_list]
+    missing_features = set(target_list) - set(source_list)
+    if missing_features:
+        raise ValueError(f"No {missing_features} features in input dataframe columns: {source_list}") 
 
 
 def cap_outliers(data: pd.DataFrame, features: List[str]=None,
@@ -36,6 +52,8 @@ def cap_outliers(data: pd.DataFrame, features: List[str]=None,
         lower_cap = cnfg.preprocess.outlier_perc["lower"]
     if upper_cap is None:
         upper_cap = cnfg.preprocess.outlier_perc["upper"]
+        
+    _check_feature_presence(target_list=group_keys, source_list=data.columns)
 
     data_no_outliers = data.copy()
     data_no_outliers[features] = data_no_outliers.groupby(by=group_keys)[features].transform(
@@ -66,8 +84,8 @@ def drop_nan_rows(X: pd.DataFrame, y: pd.Series | None=None,
     row_drop_threshold = int(len(X.columns) * threshold_percent)
     X_no_nan = X.dropna(thresh=row_drop_threshold)
     if y is not None:
-        return X_no_nan.reset_index(), y.iloc[X_no_nan.index].reset_index()
-    return X_no_nan.reset_index()
+        return X_no_nan.reset_index(drop=True), y.iloc[X_no_nan.index].reset_index(drop=True)
+    return X_no_nan.reset_index(drop=True)
 
 
 def median_groupwise_impute(X: pd.DataFrame,
@@ -83,9 +101,8 @@ def median_groupwise_impute(X: pd.DataFrame,
     if group_keys is None:
         group_keys = [cnfg.preprocess.feature_groups["city"],
                       cnfg.preprocess.feature_groups["week"]]
-    missing_keys = set(group_keys) - set(X.columns)
-    if missing_keys:
-        raise ValueError(f"Missing group keys {missing_keys}")
+                      
+    _check_feature_presence(target_list=group_keys, source_list=X.columns)
 
     X_no_nan = X.copy()
     cols_with_nan = X_no_nan.select_dtypes(include="number")\
@@ -122,17 +139,32 @@ def reduce_features(X: pd.DataFrame,
         output_feat_names = cnfg.preprocess.combine_features["output_names"]
     if function is None:
         function = cnfg.preprocess.combine_features["aggregation"]
-
-        
+      
     if not len(input_feat_groups) == len(output_feat_names):
         raise ValueError(f"Input feature groups {input_feat_groups} mismatch target keys {output_feat_names}")
-    missing_features = set(itertools.chain(*input_feat_groups)) - set(X.columns)
-    if missing_features:
-        raise ValueError(f"No {missing_features} features in input dataframe columns: {X.columns}")
-
+    
+    _check_feature_presence(target_list=itertools.chain(*input_feat_groups), source_list=X.columns)
+    
     for name, group in zip(output_feat_names, input_feat_groups):
         X_reduced[name] = X_reduced[group].agg(function, axis=1)
         X_reduced.drop(columns=group, inplace=True)
         
     return X_reduced
+    
+    
+def remove_features(X: pd.DataFrame, feats_to_drop: Iterable[str]=None)->pd.DataFrame:
+    """
+    Remove specified feature columns from DataFrame using config defaults or explicit list.
+    :param X: Input DataFrame.
+    :param feats_to_drop: Features to drop. If None, uses config multicollinearity removal list.
+                          Default None.
+    :return: New DataFrame copy with specified features removed. Raises ValueError if features missing.
+    """
+    if feats_to_drop is None:
+        feats_to_drop = cnfg.preprocess.multicolinear["removal_list"]
+    X_slim = X.copy()
+    if isinstance(feats_to_drop, str):
+        feats_to_drop = [feats_to_drop]
+    _check_feature_presence(target_list=feats_to_drop, source_list=X_slim.columns)
+    return X_slim.drop(columns=feats_to_drop)
     

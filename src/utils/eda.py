@@ -1,22 +1,28 @@
 import pandas as pd
 import numpy as np
 from typing import Any, Iterable
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.tools.tools import add_constant
 
 
 def top_correlations(data: pd.DataFrame, corr_threshold:float=0.95) -> pd.Series:
     """
     Identify and return highly correlated feature pairs above a specified threshold.
-    :param data: pandas DataFrame containing the input dataset. Defaults to df_clean.
+    :param data: pandas DataFrame containing the input dataset.
     :param corr_threshold: Correlation threshold to filter feature pairs. Default is 0.95.
     :return: A pandas Series with multi-index (feature pairs) and correlation values.
     """
-    correlations = data.select_dtypes(include="number").corr()
-    correlations = correlations.unstack().sort_values(ascending=False)
+    numeric_data = data.select_dtypes(include="number")
+    
+    if numeric_data.shape[1] < 2:  # check if subgroups have at least 2 features
+        print("not enaough features in input data (sub-groups) for correlations.")
+        return pd.Series(dtype=float)
+    
+    correlations = numeric_data.corr().unstack().sort_values(ascending=False)
     correlations = correlations[(correlations.abs() > corr_threshold) &
         (correlations.index.get_level_values(0) != correlations.index.get_level_values(1))]
     correlations = correlations.drop_duplicates()
     return correlations
-
 
 
 def value_streaks(data: pd.DataFrame, column: str, value: Any | Iterable[Any], run_threshold: int = 1
@@ -64,3 +70,24 @@ def value_streaks(data: pd.DataFrame, column: str, value: Any | Iterable[Any], r
 
     return sequence_streak_df
     
+    
+def top_vif(data: pd.DataFrame):
+    """
+    Calculate and return Variance Inflation Factor (VIF) scores for numeric features.
+    
+    :param data: pandas DataFrame containing numeric and non-numeric features.
+    :return: pandas DataFrame with features and their VIF scores,
+                sorted descending (excludes constant).
+    """
+    data_vif = add_constant(data.select_dtypes(include="number"))
+    cols = data_vif.columns
+    if data_vif.isna().sum().sum() > 1:
+        raise ValueError(f"{data_vif.isna().sum().sum()} NaNs in the dataframe.")
+    data_vif = [variance_inflation_factor(
+        data_vif.values, i) for i in range(data_vif.shape[1])]
+    data_vif = pd.DataFrame(data=data_vif, index=cols, columns=["vif"])
+    data_vif = data_vif.sort_values(by="vif", ascending=False,
+                                    na_position="first").drop(index="const")
+    
+    return data_vif
+        
