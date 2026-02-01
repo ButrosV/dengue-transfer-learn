@@ -179,6 +179,7 @@ polars>=1.0.0
 matplotlib
 seaborn
 plotly
+fastparquet
 python-kaleido
 python=3.11
 ```

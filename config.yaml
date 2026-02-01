@@ -2,16 +2,21 @@ data:
   dirs:
     main: "data"
     raw: "data/raw"
+    intermediate: "data/intermediate"
   files:
     raw:
       features_train: "dengue_features_train.csv" 
       features_test: "dengue_features_test.csv"
       labels_train: "dengue_labels_train.csv"
+    intermediate:
+      features_clean: "dengue_features_clean.parquet"
+      labels_clean: "dengue_features_clean.parquet"
+      nan_mask: "dengue_nan_mask.parquet"
 preprocess:
   feature_groups:
     env_prefixes: ["ndvi_", "reanalysis_", "station_", "precip"]
-    temporal: ["year", "weekofyear", "week_start_date"]
     city: "city"
+    datetime: "week_start_date"
     week: "weekofyear"
     target: "total_cases"
   outlier_perc:
