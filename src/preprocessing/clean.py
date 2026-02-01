@@ -1,25 +1,10 @@
 import pandas as pd
-import itertools
-from typing import List, Dict, Any, Iterable
+from typing import List, Dict, Any
+
+from src.utils.utils import _check_feature_presence
 from src.config import ProjectConfig
 
 cnfg = ProjectConfig.load_configuration()
-
-
-def _check_feature_presence(target_list: Iterable[str], source_list: Iterable[str]) -> None:
-    """
-    Validate that all required features exist in source column list.
-    :param target_list: Iterable of required feature names to check for.
-    :param source_list: Iterable of available column names from input DataFrame.
-    :return: None. Raises ValueError if any required features are missing.
-    """
-    if isinstance(target_list, str):
-        target_list = [target_list]
-    if isinstance(source_list, str):
-        source_list = [source_list]
-    missing_features = set(target_list) - set(source_list)
-    if missing_features:
-        raise ValueError(f"No {missing_features} features in input dataframe columns: {source_list}") 
 
 
 def cap_outliers(data: pd.DataFrame, features: List[str]=None,
@@ -86,8 +71,8 @@ def drop_nan_rows(X: pd.DataFrame, y: pd.Series | None=None,
     if y is not None:
         return X_no_nan.reset_index(drop=True), y.iloc[X_no_nan.index].reset_index(drop=True)
     return X_no_nan.reset_index(drop=True)
-
-
+    
+    
 def median_groupwise_impute(X: pd.DataFrame,
                             group_keys: List[str]=None) -> pd.DataFrame:
     """
@@ -96,7 +81,8 @@ def median_groupwise_impute(X: pd.DataFrame,
     :param X: pandas DataFrame containing grouping columns and features to impute.
     :param group_keys: Optional list of column names for grouping.
                  Default None pills 'city' and 'week' feature names from config.yaml.
-    :return: Copy of input DataFrame with NaNs filled by group-wise medians.
+    :return: Copy of input DataFrame with NaNs filled by group-wise medians,
+    		DataFrame with NaN mask for those values thate were imputed.
     """
     if group_keys is None:
         group_keys = [cnfg.preprocess.feature_groups["city"],
@@ -107,64 +93,12 @@ def median_groupwise_impute(X: pd.DataFrame,
     X_no_nan = X.copy()
     cols_with_nan = X_no_nan.select_dtypes(include="number")\
         .columns[X_no_nan.select_dtypes(include="number").isna().sum() > 0].to_list()
+        
+    nan_mask = X_no_nan[cols_with_nan].isna()
 
     if len(cols_with_nan) > 0:
         X_no_nan[cols_with_nan] = X_no_nan[cols_with_nan + group_keys]\
             .groupby(by=group_keys)[cols_with_nan]\
             .transform(lambda group: group.fillna(group.median()))
-    return X_no_nan
-    
-    
-def reduce_features(X: pd.DataFrame, 
-                    input_feat_groups: List[List[str]]=None,
-                    output_feat_names: List[str]=None,
-                   function: str=None):
-    """
-    Aggregate multiple feature groups into single reduced features using specified function.
-    Combine input features and drop originals.
-    
-    :param X: Input pandas DataFrame.
-    :param input_feat_groups: List of feature group lists to aggregate. Default None uses 
-           config.yaml settings (e.g., [['ndvi_ne', 'ndvi_nw']]).
-    :param output_feat_names: Output column names for aggregated features. Default None uses 
-           config.yaml settings (e.g., ['ndvi_north']).
-    :param function: Aggregation function string ('mean', 'sum', 'median'). Default None uses 
-           config.yaml settings (e.g 'mean').
-    :return: DataFrame with reduced features. Original input columns dropped.
-    """
-    X_reduced = X.copy()
-    if input_feat_groups is None:
-        input_feat_groups = cnfg.preprocess.combine_features["input_groups"]
-    if output_feat_names is None:
-        output_feat_names = cnfg.preprocess.combine_features["output_names"]
-    if function is None:
-        function = cnfg.preprocess.combine_features["aggregation"]
-      
-    if not len(input_feat_groups) == len(output_feat_names):
-        raise ValueError(f"Input feature groups {input_feat_groups} mismatch target keys {output_feat_names}")
-    
-    _check_feature_presence(target_list=itertools.chain(*input_feat_groups), source_list=X.columns)
-    
-    for name, group in zip(output_feat_names, input_feat_groups):
-        X_reduced[name] = X_reduced[group].agg(function, axis=1)
-        X_reduced.drop(columns=group, inplace=True)
-        
-    return X_reduced
-    
-    
-def remove_features(X: pd.DataFrame, feats_to_drop: Iterable[str]=None)->pd.DataFrame:
-    """
-    Remove specified feature columns from DataFrame using config defaults or explicit list.
-    :param X: Input DataFrame.
-    :param feats_to_drop: Features to drop. If None, uses config multicollinearity removal list.
-                          Default None.
-    :return: New DataFrame copy with specified features removed. Raises ValueError if features missing.
-    """
-    if feats_to_drop is None:
-        feats_to_drop = cnfg.preprocess.multicolinear["removal_list"]
-    X_slim = X.copy()
-    if isinstance(feats_to_drop, str):
-        feats_to_drop = [feats_to_drop]
-    _check_feature_presence(target_list=feats_to_drop, source_list=X_slim.columns)
-    return X_slim.drop(columns=feats_to_drop)
+    return X_no_nan, nan_mask
     
