@@ -65,7 +65,7 @@ def save_file(df: pd.DataFrame, path: Union[str, Path], overwrite=False):
         df.to_parquet(path, index=False, engine='fastparquet')
     else:
         raise ValueError(f"Unsupported file format: {path.suffix}")
-    logging.info(f"Saved {df.shape} shaped data to {path}")
+    logging.info(f"Saved {df.shape} shaped data as {path.name}")  # remove .name for non-public notebooks
     return path
     
      

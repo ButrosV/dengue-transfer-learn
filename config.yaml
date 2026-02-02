@@ -10,7 +10,7 @@ data:
       labels_train: "dengue_labels_train.csv"
     intermediate:
       features_clean: "dengue_features_clean.parquet"
-      labels_clean: "dengue_features_clean.parquet"
+      labels_clean: "dengue_labels_clean.parquet"
       nan_mask: "dengue_nan_mask.parquet"
 preprocess:
   feature_groups:
