@@ -14,7 +14,7 @@ data:
       nan_mask: "dengue_nan_mask.parquet"
 preprocess:
   feature_groups:
-    env_prefixes: ["ndvi_", "reanalysis_", "station_", "precip"]
+    env_prefixes: ["ndvi_", "reanalysis_", "station_", "precipitation"]
     city: "city"
     datetime: "week_start_date"
     week: "weekofyear"
@@ -23,6 +23,10 @@ preprocess:
     lower: 0.01
     upper: 0.99
   nan_threshold: 0.5
+  missingness_features:
+    group_prefixes: [["station", "precipitation"], "ndvi_s", "ndvi_n"]
+    aggregated_feat_n: "pct_env_feat"
+    new_feature_prefix: "missing_"
   combine_features:
     input_groups: 
       - ["ndvi_ne", "ndvi_nw"]
