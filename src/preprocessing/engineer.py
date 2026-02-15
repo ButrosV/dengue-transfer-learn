@@ -104,19 +104,123 @@ def reduce_features(X: pd.DataFrame,
     return X_reduced
     
     
-def remove_features(X: pd.DataFrame, feats_to_drop: Iterable[str]=None)->pd.DataFrame:
+def _get_cumulative_streaks(group: pd.Series,
+                            low_value_range:int,
+                           filter_initial_streaks: bool=False):
     """
-    Remove specified feature columns from DataFrame using config defaults or explicit list.
-    :param X: Input DataFrame.
-    :param feats_to_drop: Features to drop. If None, uses config multicollinearity removal list.
-                          Default None.
-    :return: New DataFrame copy with specified features removed. Raises ValueError if features missing.
+    Compute low-value streak lengths within a 1D series, optionally filtering to initial streak only.
+
+    :param group: pandas Series representing a single grouped sequence (e.g., one city).
+    :param low_value_range: Upper bound (exclusive) for values considered "low".
+    :param filter_initial_streaks: If True, keep only initial low-value streak when it starts at first
+                                   position (all others 0). If False, return complete streak lengths.
+                                   Default is False.
+    :return: pandas Series (same index/shape as `group`) with cumulative low-value streak lengths,
+             filtered according to `filter_initial_streaks`.
     """
-    if feats_to_drop is None:
-        feats_to_drop = cnfg.preprocess.multicolinear["removal_list"]
-    X_slim = X.copy()
-    if isinstance(feats_to_drop, str):
-        feats_to_drop = [feats_to_drop]
-    _check_feature_presence(target_list=feats_to_drop, source_list=X_slim.columns)
-    return X_slim.drop(columns=feats_to_drop)
+    
+    mask_lows = group.isin(range(low_value_range))
+    streak_groups = (mask_lows != mask_lows.shift(fill_value=False)).cumsum()
+    low_count_streaks = mask_lows.groupby(by=streak_groups).cumsum()
+
+    if not filter_initial_streaks:
+        return low_count_streaks
+
+    else:
+        if low_count_streaks.iloc[0] == 1:
+            initial_low_streaks = low_count_streaks.where(streak_groups == 1, 0)
+        else:
+            initial_low_streaks = pd.Series(0, index=low_count_streaks.index)
+        return initial_low_streaks
+
+
+def low_value_targets(X: pd.DataFrame, y: pd.DataFrame,
+                      target_feature: str | None=None,
+                      group_feature:str | None=None,
+                      new_feat_name:str | None=None,
+                      initial_streaks_only:bool | None=None,
+                      min_initial_streak_len:int | None=None,
+                      low_value_range:int | None=None
+                     ) -> pd.DataFrame:
+    """
+    Generate low-value streak features for ML pipelines. Creates continuous streak length feature
+    (`low_case_streak`) and optional boolean initial-streak indicator with minimum length filtering.
+    
+    Continuous streak preserves magnitude info for model gradients. Boolean initial streak supports
+    minimum length thresholding.
+
+    :param X: Input features DataFrame.
+    :param y: Target DataFrame (same index as X).
+    :param target_feature: Target column name. Uses config default if None.
+    :param group_feature: Grouping column (e.g., 'city'). None processes entire series.
+                            Defaults to config settings.
+    :param new_feat_name: Output base name (e.g., 'low_case_streak'). None returns X unchanged.
+                            Defaults to config settings.
+    :param initial_streaks_only: If True, adds thresholded boolean `initial_{new_feat_name}`.
+                            Defaults to config settings.
+    :param min_initial_streak_len: Min length threshold. Applies **only** to boolean `initial_*` feature.
+                            Defaults to config settings.
+    :param low_value_range: Values < this are "low" (exclusive upper bound).
+                            Defaults to config settings.
+    :return: X with `low_case_streak` (continuous) ± `initial_low_case_streak` (boolean).
+    """
+    
+    assert all(X.index == y.index), "Indices for 'X' and 'y' must be aligned." 
+    
+    config_values = cnfg.preprocess
+    
+    target_feature = target_feature or config_values.feature_groups["target"]
+    group_feature = group_feature or config_values.feature_groups["city"]
+    min_initial_streak_len = min_initial_streak_len or (config_values.
+        low_value_streak_features["target_streak_len_threshold"])
+    new_feat_name = new_feat_name or (config_values.
+        low_value_streak_features.get("target_streak_feat_n"))
+    low_value_range = low_value_range or (config_values.
+        low_value_streak_features["low_value_range"])
+
+    if initial_streaks_only is None:
+        initial_streaks_only = config_values.low_value_streak_features.get("initial_streaks"
+                                                                          ) or False
+    if new_feat_name is None:
+        return X
+        
+    X_low_streaks = X.copy()
+
+    if group_feature is not None:
+        low_count_streaks = y.groupby(by=group_feature)[target_feature].transform(
+            lambda x: _get_cumulative_streaks(x, low_value_range))
+    else:
+        low_count_streaks = _get_cumulative_streaks(y[target_feature], low_value_range)
+        
+    temp_output_dict = {new_feat_name: low_count_streaks}
+
+    if initial_streaks_only:
+        if group_feature is not None:
+            initial_streaks = y.groupby(by=group_feature)[target_feature].transform(
+                lambda x: _get_cumulative_streaks(x, low_value_range, initial_streaks_only))
+        else:
+            initial_streaks = _get_cumulative_streaks(y[target_feature], low_value_range,
+                                                      initial_streaks_only)
+            
+        if min_initial_streak_len:
+            long_streak_mask = initial_streaks >= min_initial_streak_len
+            long_strek_threshpoints = long_streak_mask[
+                initial_streaks == min_initial_streak_len].index
+            
+            for point in long_strek_threshpoints:
+                start = max(0, point - min_initial_streak_len + 1)
+                long_streak_mask[start:point] = True
+            initial_streaks = initial_streaks.where(long_streak_mask, 0)
+            
+        temp_output_dict[f"initial_{new_feat_name}"] = initial_streaks
+            
+            
+    for feat_name, streak in temp_output_dict.items():
+        if feat_name.startswith("initial_"):
+            streak = streak.astype(bool).astype(int)
+        X_low_streaks[feat_name] = streak
+        
+    return X_low_streaks
+    
+    
     
