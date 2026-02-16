@@ -27,17 +27,17 @@ preprocess:
     group_prefixes: [["station", "precipitation"], "ndvi_s", "ndvi_n"]
     aggregated_feat_n: "pct_env_feat"
     new_feature_prefix: "missing_"
-  low_value_streak_features:
-    target_streak_len_threshold: 26
-    target_streak_feat_n: "low_case_streak"
-    initial_streaks: True
-    low_value_range: 2
   combine_features:
     input_groups: 
       - ["ndvi_ne", "ndvi_nw"]
       - ["ndvi_se","ndvi_sw"]
     output_names: ["ndvi_north","ndvi_south"]
     aggregation: "mean"
+  low_value_streak_features:
+    target_streak_len_threshold: 26
+    target_streak_feat_n: "low_case_streak"
+    initial_streaks: True
+    low_value_range: 2
   multicolinear:
     removal_list:
       - "reanalysis_sat_precip_amt_mm"
