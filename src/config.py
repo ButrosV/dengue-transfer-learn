@@ -43,6 +43,7 @@ class PreprocesConfig(BaseModel):
     missingness_features: Dict[str, Any]
     combine_features: Dict[str, Any]
     low_value_streak_features: Dict[str, Any]
+    dynamic_temporal_features: Dict[str, Any]
     multicolinear: Dict[str, List[str]]
 
 
