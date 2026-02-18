@@ -39,10 +39,10 @@ preprocess:
     initial_streaks: True
     low_value_range: 2
   dynamic_temporal_features:
-    target: {"feature_name": "total_cases", "task": "lag", backward_steps: [1,4]}
-    precipitation: {"feature_name": "precipitation_amt_mm", "task": "sum", backward_steps: 4}
-    temperature: {"feature_name": "station_avg_temp_c", "task": "mean", backward_steps: 4}
-    humidity: {"feature_name": "reanalysis_relative_humidity_percent", "task": "mean", backward_steps: 4}    
+    target: {source_feature: "total_cases", task: "lag", backward_steps: [1,4]}
+    precipitation: {source_feature: "precipitation_amt_mm", task: "sum", backward_steps: 4}
+    temperature: {source_feature: "station_avg_temp_c", "task": "mean", backward_steps: 4}
+    humidity: {source_feature: "reanalysis_relative_humidity_percent", task: "mean", backward_steps: 4}          
   multicolinear:
     removal_list:
       - "reanalysis_sat_precip_amt_mm"

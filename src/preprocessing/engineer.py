@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import itertools
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -63,7 +62,7 @@ def add_missingness_features(X: pd.DataFrame,
             logging.warning(f"No columns match prefix/es '{prefix}' - skipping.")
             continue
         feature_name = f"{output_feature_prefix}{prefix[0]}"
-        X_missing[feature_name] = nan_mask[features].agg("max", axis=1)
+        X_missing[feature_name] = nan_mask[features].agg("max", axis=1).astype(int)
     
     return X_missing
     
@@ -222,37 +221,4 @@ def low_value_targets(X: pd.DataFrame, y: pd.DataFrame,
         X_low_streaks[feat_name] = streak
         
     return X_low_streaks
-    
-    
-def circular_time_features(X: pd.DataFrame,
-                           source_feature: str | None = None,
-                           period: int | None = None,
-                           drop_source_feature: bool = True):
-    """
-    Generate cyclical sin/cos features for periodic time variables. Transforms integer week/month/day
-    features into continuous circular encodings that preserve temporal continuity across period boundaries.
-
-    :param X: Input features DataFrame.
-    :param source_feature: Periodic column name (e.g., 'weekofyear'). Uses config default if None.
-    :param period: Fixed cycle length (e.g., 52 for weeks, 12 for months). Uses column max if None.
-    :param drop_source_feature: If True, drops original source column after encoding.
-    :return: X with `sin_{source_feature}` and `cos_{source_feature}` columns added.
-    """
-    source_feature = (source_feature 
-                      or cnfg.preprocess.feature_groups["week"])
-    
-    _check_feature_presence(source_feature, X.columns)
-    
-    X_circular = X.copy()
-    divisor = period or X_circular[source_feature].max()
-    
-    X_circular[f"sin_{source_feature}"] = np.sin(
-        2 * np.pi * X_circular[source_feature] / divisor)
-    X_circular[f"cos_{source_feature}"] = np.cos(
-        2 * np.pi * X_circular[source_feature] / divisor)
-
-    if drop_source_feature:
-        X_circular.drop(columns=[source_feature], inplace=True)
-
-    return X_circular
     
