@@ -18,35 +18,46 @@ Goal: Demonstrate **25% MAE improvement** via transfer learning on small epidemi
 
 ```
 .
-├── .gitignore                   # Excludes data/models from GitHub
-├── docker-compose.yml           # GPU training container (TF 2.12)
-├── environment.yml              # mamba preprocessing env (Python 3.11)
-├── README.md                    # This file
+├── .gitignore                   	# Excludes data/models from GitHub
+├── docker-compose.yml           	# GPU training container (TF 2.12)
+├── environment.yml              	# mamba preprocessing env (Python 3.11)
+├── README.md                    	# This file
 │
-├── data/                        # Local only (.gitignore protected)
-│   ├── raw/                     # dengue_features_train.csv, dengue_labels_train.csv
-│   ├── processed/               # sj_train.parquet, iq_val.parquet
-│   └── intermediate/            # sj_windows.npy, iq_windows.npy
+├── data/                        	# Local only (.gitignore protected)
+│   ├── raw/                     	# dengue_features_train.csv, dengue_labels_train.csv
+│   ├── processed/               	# sj_train.parquet, iq_val.parquet
+│   └── intermediate/            	# sj_windows.npy, iq_windows.npy
 │
-├── notebooks/                   # EDA + results (committed to GitHub)
-│   ├── 01_eda.ipynb             # City splits, feature correlations, Plotly grids
-│   ├── 02_windowing.ipynb       # Sliding window generation (12-week → next week)
-│   └── 03_results.ipynb         # Transfer learning comparison plots
+├── notebooks/				# EDA + results (committed to GitHub)
+│   ├── 01_eda_dengue.ipynb		# City splits, feature correlations,
+│   ├── 02_data_cleaning_dengue.ipynb
+│   ├── 03_feature_eng_dengue.ipynb
+│   └── 04_feature_selection.ipynb	# final feature selection, Walk-forward Cross-Validation, pre-modeling preprocessing
 │
-├── src/                         # Modular Python code (committed to GitHub)
-│   ├── __init__.py
-│   ├── config.py                # WINDOW_SIZE=12, 22 weather features list
-│   ├── data.py                  # load_data(), create_windows()
-│   ├── models.py                # model_builder() for Keras Tuner
-│   └── utils.py                 # plot_results(), mae_table()
+├── src/				# Modular Python code (committed to GitHub)
+│   ├── config.py
+│   ├── models.py			# model_builder() for Keras Tuner
+│   ├── preprocessing/
+│   │   ├── clean.py
+│   │   ├── engineer/
+│   │   │   ├── base.py
+│   │   │   ├── pipeline.py
+│   │   │   └── temporal.py
+│   │   ├── pipeline.py
+│   │   ├── preprocess.py		# create_windows
+│   │   └── select.py
+│   └── utils/
+│       ├── eda.py
+│       ├── utils.py			# load and save data, mae_table() ??, misc
+│       └── visualizations.py		# plot_results()
 │
-├── tensorman/                   # Docker training scripts
-│   ├── Dockerfile               # TF 2.12.0-gpu + keras-tuner 1.4.7
-│   └── train.py                 # tuner.search() hyperparameter optimization
+├── tensorman/                   	# Docker training scripts
+│   ├── Dockerfile               	# TF 2.12.0-gpu + keras-tuner 1.4.7
+│   └── train.py                 	# tuner.search() hyperparameter optimization
 │
-├── models/                      # Trained models (.gitignore protected)
+├── models/                      	# Trained models (.gitignore protected)
 │   └── best_transfer.h5
-└── reporting/                   # Portfolio screenshots (committed to GitHub)
+└── reporting/                   	# Portfolio screenshots (committed to GitHub)
     └── pics/
         ├── weather_features_grid.png
         └── mae_comparison.png
