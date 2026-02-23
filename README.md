@@ -189,10 +189,10 @@ ipywidgets>=8.0.0
 polars>=1.0.0
 matplotlib
 seaborn
-plotly
 fastparquet
 python-kaleido
 python=3.11
+lightgbm
 ```
 
 **Training (Docker `dengue-tf212:v1`):**
