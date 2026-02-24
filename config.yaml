@@ -3,6 +3,7 @@ data:
     main: "data"
     raw: "data/raw"
     intermediate: "data/intermediate"
+    pics: "reporting/pics"
   files:
     raw:
       features_train: "dengue_features_train.csv" 

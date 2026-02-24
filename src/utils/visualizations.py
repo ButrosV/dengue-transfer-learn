@@ -1,14 +1,42 @@
 import pandas as pd
 import numpy as np
 import random
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Dict
+from pathlib import Path
+import os
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import seaborn as sns
-
+from matplotlib.ticker import AutoMinorLocator
 from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
 
+import seaborn as sns
+
+from src.config import ProjectConfig
+
+cnfg = ProjectConfig.load_configuration()
+
+
+def save_picture(path: str | Path, show: bool = True):
+    """Save current figure with folder resolution and auto dir creation.
+    Optionally display (default for notebooks)"""
+    path = Path(path)
+    if path.parent.name == '':
+        folder = cnfg.data.dirs.get("pics")
+        if folder is not None:
+            path = folder / path.name
+
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+        
+    plt.tight_layout()
+    plt.savefig(path, bbox_inches='tight', dpi=150)
+    if not show:
+        plt.close() # Prevents memory buildup
+    
+    return path
+
+        
 def random_color():
     """
     get random matplot-lib colour - just for fun
@@ -39,10 +67,12 @@ def random_colormap(seaborn: bool = False, n_colors: int = 6):
 def compute_correlations_matrix(data: pd.DataFrame,
                                annot: bool = False,
                                figsize: tuple = (17, 5),
-                                cmap: str = "PuBuGn"):
+                                cmap: str = "PuBuGn",
+                                savefile_name: str | None = None):
     """
     Compute and display a heatmap of the correlation matrix for numerical features.    
     :param data: pandas DataFrame containing the input data.
+    :savefile_name: Optional path for saving visualization.
     :return: pandas DataFrame of the correlation matrix.
     """
     plt.figure(figsize=figsize)
@@ -61,15 +91,20 @@ def compute_correlations_matrix(data: pd.DataFrame,
     plt.xticks(rotation=30, ha="right", rotation_mode="anchor")
     plt.title("Correlation matrix for feature and target columns.",
                 fontsize=18, fontweight='bold', y=0.95)
-    plt.tight_layout();
-
-
+                
+    if savefile_name is not None:
+        saved_path = save_picture(path=savefile_name)
+        
+    plt.tight_layout()
+    plt.show()
+   
 
 def display_distributions(data: pd.DataFrame, features: List[str],
                           fig_width: int = 17,
                           hue_palette: Tuple[str | None, Any | None] = (None, None),
                           x_range: Tuple[int,int] | None = None,
-                          title_prefix: str | None =None) -> None:
+                          title_prefix: str | None =None,
+                          savefile_name: str | None = None) -> None:
     """Display distribution graphs for specified numerical features.
     All subplots share the same x-axis scale.
     :param data: DataFrames with numerical categories for visualization.
@@ -79,6 +114,7 @@ def display_distributions(data: pd.DataFrame, features: List[str],
     :param x_range: Optional tuple (min, max) to set uniform x-axis limits 
                 across all subplots (default: None, auto-scaled).
     :param title_prefix: Optional, prefix for visualization title.
+    :savefile_name: Optional path for saving visualization.
     """
     n_subplots = len(features) * 2
     fig, axs = plt.subplots(nrows=n_subplots, figsize = (fig_width, n_subplots * 2), 
@@ -106,14 +142,19 @@ def display_distributions(data: pd.DataFrame, features: List[str],
     if x_range is not None:
         axs[0].set_xlim(x_range)
         
-    fig.tight_layout();
-
+    if savefile_name is not None:
+        saved_path = save_picture(path=savefile_name)  
+              
+    fig.tight_layout()
+    plt.show()
+    
 
 def display_timeseries(data: pd.DataFrame, x: str, y: str,
                         hue: str | None = None, grid: bool = True,
                         month_ticks: Tuple[int, ...] = (1,4,7,10),
                         shift: int | None = None,
-                        title_prefix: str | None = None) -> None:
+                        title_prefix: str | None = None,
+                        savefile_name: str | None = None) -> None:
     """
     Display timeseries line plots for specified features.
     All subplots share the same x-axis scale.
@@ -127,6 +168,7 @@ def display_timeseries(data: pd.DataFrame, x: str, y: str,
         for an overlaid comparison line.
     :param month_ticks: Tuple of month numbers for minor x-axis ticks (default: (1,4,7,10) quarterly).
     :param title_prefix: Optional, prefix for visualization title.
+    :savefile_name: Optional path for saving visualization.
     """
     
     fig, ax = plt.subplots(figsize=(19, 5))
@@ -163,5 +205,81 @@ def display_timeseries(data: pd.DataFrame, x: str, y: str,
                     fontsize=13, fontweight="bold");
     else:
         plt.title("Target distribution over time.",
-                 fontsize=13, fontweight="bold");
+                 fontsize=13, fontweight="bold")
+                 
+    if savefile_name is not None:
+        saved_path = save_picture(path=savefile_name)            
+             
+    plt.show()
+             
+                
+def display_wfcv_folds(data:Dict,
+                       X:pd.DataFrame | None = None,
+                       group_feat:str | None = None,
+                       savefile_name: str | None = None):
+    """
+    Visualize walk-forward cross-validation (WFCV) fold evaluation metrics 
+    across multiple statistics with feature group boundaries.
+    
+    Create subplots (one per statistic) showing metrics over folds. 
+    Optionally overlays feature group boundaries as vertical lines.
+    
+    :param data: Dict containing WFCV results with keys:
+                 - "raw": Dict of {statistic: metrics_list} for each fold
+                 - "fold_test_starts": Array of fold test start positions
+    :param X: Optional features DataFrame for group boundaries. 
+              Index should match data fold positions or be sequential.
+    :param group_feat: Optional column name in X to group by for boundaries.
+    :savefile_name: Optional path for saving visualization.
+    
+    :return: Tuple of (figure, axs) for further customization.
+    
+    Example:
+        display_wfcv_folds(wfcv_results, X=features_df, group_feat='city_id')
+    """
+    figure, axs = plt.subplots(ncols=1, nrows=len(data["raw"]),
+                               figsize=(13, len(data["raw"]) * 2), sharex=True)
+    
+    if (X is not None) and (group_feat is not None):
+        if all(X.index == range(len(X))):
+            feat_boundaries=X.groupby(by=group_feat).nth(0).index
+        else:
+            temp_series = X[group_feat].reset_index(drop=True)
+            feat_boundaries=temp_series.groupby(level=0).nth(0).index
+        feat_boundaries = [boundary for boundary in feat_boundaries if boundary != 0]
+        fold_adjusted_boundaries = np.searchsorted(data["fold_test_starts"], feat_boundaries)
+
+        for index, scaled in zip(feat_boundaries, fold_adjusted_boundaries):
+            figure.text(x=scaled, y=1.07, fontweight="bold",
+                        s=f"{X[group_feat].iloc[index - 1]} <-> {X[group_feat].iloc[index]}",
+                        ha="center",
+                        transform=axs[-1].get_xaxis_transform()
+                       )
+    else:
+        fold_adjusted_boundaries = []
+    
+    index = 0
+    for stat, metrics in data["raw"].items():
+        ax = axs[index]
+        ax.plot(metrics, marker='o', markersize=3,
+                mfc=random_color(), color=random_color())
+        
+        tick_col = random_color()    
+        ax.grid(alpha=0.7, linestyle="dashed", color=tick_col)
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(which="major", length=7, color=tick_col)
+    
+        ax.vlines(x=fold_adjusted_boundaries,
+                  ymin=0, ymax=1, transform=ax.get_xaxis_transform(), 
+                  linestyles="dashdot", colors=random_color())
+
+        ax.set_ylabel(stat, fontweight="bold")
+        index += 1
+    
+    figure.suptitle("WFCV fold evaluation metrics.", fontsize=13, fontweight="bold")
+    
+    if savefile_name is not None:
+        saved_path = save_picture(path=savefile_name)
+        
+    plt.show()
     

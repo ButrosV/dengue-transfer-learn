@@ -56,15 +56,16 @@ def get_wfcv(X: pd.DataFrame,
     :return: Dict with 'aggregated' (feature-level stats + mean metrics) 
                         and 'raw' (per-fold metrics):
              - aggregated: mean_r2, mean_mae, feature[list], mean_importances[array], 
-                          std_importances[array], stability_cv[array]
+                          stability_cv[array]
              - raw: raw_r2[list], raw_mae[list] (one value per fold)
+             - fold_test_starts: fold test start indexes
     """
     target_feture = target_feture or cnfg.preprocess.feature_groups["target"]
     y = y if isinstance(y, pd.Series) else y.copy()[target_feture]
 
     assert all(X.index == y.index), "Indices for 'X' and 'y' must be aligned." 
     
-    results = {"r2s": [], "mae": [], "importance_gains": []}
+    results = {"r2s": [], "mae": [], "importance_gains": [], "fold_test_starts" : []}
     
     for test_start in range(min_train_size, len(X) - test_size + 1, stride_size):
         test_start = min(len(X) - test_size, test_start)
@@ -79,6 +80,7 @@ def get_wfcv(X: pd.DataFrame,
         results["mae"].append(mean_absolute_error(y_pred=y_pred, y_true=y_test))
         results["r2s"].append(r2_score(y_pred=y_pred, y_true=y_test))
         results["importance_gains"].append(model.booster_.feature_importance(importance_type='gain'))
+        results["fold_test_starts"].append(test_start)
     
     std_importances = np.std(results["importance_gains"], axis=0)
     mean_importances = np.mean(results["importance_gains"], axis=0)
@@ -87,11 +89,11 @@ def get_wfcv(X: pd.DataFrame,
                           "mean_mae": np.mean(results["mae"]),
                           "feature": X.columns.to_list(),
                           "mean_importances": mean_importances,
-                          "std_importances": std_importances,
                           "stability_cv": std_importances / (mean_importances + 1e-8)}
                           
     raw_stats = {"raw_r2": results["r2s"],
                  "raw_mae": results["mae"]}
                                  
-    return {"aggregated": aggregated_results, "raw": raw_stats}
+    return {"aggregated": aggregated_results, "raw": raw_stats,
+    		"fold_test_starts": results["fold_test_starts"]}
     
