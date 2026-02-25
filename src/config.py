@@ -45,6 +45,8 @@ class PreprocesConfig(BaseModel):
     low_value_streak_features: Dict[str, Any]
     dynamic_temporal_features: Dict[str, Any]
     multicolinear: Dict[str, List[str]]
+    wfcv: Dict[str, Dict[str, Any]]
+    target: Dict[str, bool]
 
 
     class Config:

@@ -58,6 +58,11 @@ preprocess:
 #      - "city"
       - "year"
       - "week_start_date"
+  wfcv:
+    window_splits: {test_size: 52, min_train_size: 104, stride_size: 52}
+    feature_selection_policy: {mean_imp_thresh: 0, lowest_mean_thresh: 0.2, stability_cv_thresh: 1}
+  target:
+    logtransform: True
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001
