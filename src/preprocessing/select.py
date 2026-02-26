@@ -1,13 +1,14 @@
 import pandas as pd
 import numpy as np
 
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Dict, Any
+from pathlib import Path
 
 import lightgbm as lgb
 
 from sklearn.metrics import r2_score, mean_absolute_error
 
-from src.utils.utils import _check_feature_presence
+from src.utils.utils import _check_feature_presence, load_file, save_file
 from src.preprocessing.preprocess import encode_categorical
 from src.config import ProjectConfig
 
@@ -109,7 +110,7 @@ def wfcv_feature_autoselect(X: pd.DataFrame, y: pd.DataFrame | pd.Series,
                            mean_imp_thresh: float | None = None,
                            lowest_mean_thresh:float | None = None,
                            stability_cv_thresh:float | None = None,
-                           do_not_drop:Tuple[str] or None = None):
+                           do_not_drop:Tuple[str, ...] or None = None):
     """
     Perform walk-forward CV feature selection, dropping low-importance and unstable features.
     
@@ -163,4 +164,71 @@ def wfcv_feature_autoselect(X: pd.DataFrame, y: pd.DataFrame | pd.Series,
     X = X.drop(columns = drop_feats)
 
     return {"data": X, "removed_features": drop_feats}
+    
+    
+def pipe_select(
+    X: pd.DataFrame | None=None,
+    y: pd.DataFrame | None=None,
+    manual_dirs: Dict[str, Path] | None=None,
+    manual_files: Dict[str, Path] | None=None,
+    datetime_col: str=None,
+    wfcv_auto_select: bool = True,
+    overwrite_files: bool=False) -> Dict[str, Any]:
+    """
+    Feature selection pipeline for dengue case prediction dataset.
         
+    Load engineered features/labels from files (if not provided), remove hardcoded 
+    or cinfig file lisetd features via remove_features(), optionally run
+    WFCV-based auto-selection and save selected features file for LightGBM/LSTM modeling.
+    
+    :param X: Input features DataFrame. Default None loads from config data.files.features_eng.
+    :param y: Input targets DataFrame. Default None loads from config data.files.labels_eng.
+    :param manual_dirs: Dict of directory paths to override config.yaml data.dirs. 
+        Default None uses config defaults.
+    :param manual_files: Dict of filenames to override config.yaml data.files. 
+        Default None uses config defaults.
+    :param datetime_col: Name of datetime column for parsing loaded files. Default None uses
+        config.yaml preprocess.feature_groups["datetime"].
+    :param wfcv_auto_select: If True, applies wfcv_feature_autoselect() after manual removal.
+        Default True.
+    :param overwrite_files: If True, overwrites existing selected features file. Default False.
+    
+    :return: Dict containing:
+        - 'X_select_save_path': Path where selected features saved
+        - 'X_select_data': Final selected features DataFrame (post manual + WFCV filtering)
+        - 'y_select_data': Target DataFrame (unchanged, copied for safety)
+        - 'wfcv_removed_features': List of features dropped by WFCV auto-selector 
+                                  (empty list if wfcv_auto_select=False)
+    """
+    dirs = manual_dirs or cnfg.data.dirs
+    filenames = manual_files or cnfg.data.files
+    datetime_col = datetime_col or cnfg.preprocess.feature_groups["datetime"]
+
+    file_loaders = {
+        'X': lambda: load_file(path=dirs["intermediate"] / 
+                               filenames["features_eng"],
+                               datetime_col=datetime_col),
+        'y': lambda: load_file(path=dirs["intermediate"] /
+                               filenames["labels_eng"],
+                               datetime_col=datetime_col),
+    }
+    
+    X_select = X.copy() if X is not None else file_loaders['X']()
+    y_select = y.copy() if y is not None else file_loaders['y']()
+    wfcv_removed_features = []
+    
+    X_select = remove_features(X=X_select)
+    if wfcv_auto_select:
+        auto_selector_output = wfcv_feature_autoselect(X=X_select, y=y_select)
+        X_select = auto_selector_output["data"]
+        wfcv_removed_features = auto_selector_output["removed_features"]
+
+    X_save_path = save_file(df=X_select, path=dirs["intermediate"] / 
+                            filenames["features_selected"],
+                            overwrite=overwrite_files)
+
+    return {"X_select_save_path": X_save_path,
+            "X_select_data": X_select,
+            "y_select_data": y_select,   
+            "wfcv_removed_features": wfcv_removed_features}
+                  

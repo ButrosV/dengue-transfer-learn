@@ -12,6 +12,7 @@ data:
     intermediate:
       features_clean: "dengue_features_clean.parquet"
       features_eng: "dengue_features_eng.parquet"
+      features_selected: "dengue_features_select.parquet"
       labels_clean: "dengue_labels_clean.parquet"
       labels_eng: "dengue_labels_eng.parquet"
       nan_mask: "dengue_nan_mask.parquet"
