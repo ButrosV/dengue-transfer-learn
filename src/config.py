@@ -1,5 +1,5 @@
 from __future__ import annotations  # For forward refs like 'ProjectConfig'
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pathlib import Path
 from typing import Dict, Any, ClassVar, List
 import yaml
@@ -27,13 +27,11 @@ class DataConfig(BaseModel):
     dirs: Dict[str, Path]
     files: Dict[str, Path]
     
-
-    class Config:
-        """In case more complex data types added - eg. dataframes.
-        For non-defined params, if found in config.yaml - free form, no type enforcement
-        """
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed = True,
         extra = "allow"
+    )
+    
 
 class PreprocesConfig(BaseModel):
     """Configuration for model preprocessing variables."""
@@ -48,10 +46,7 @@ class PreprocesConfig(BaseModel):
     wfcv: Dict[str, Dict[str, Any]]
     target: Dict[str, bool]
 
-
-    class Config:
-       """For non-defineed params, if found in config.yaml - free form, no type enforcment."""
-       extra = "allow"
+    model_config = ConfigDict(extra = "allow")
 
 
 class ModelConfig(BaseModel):
@@ -60,10 +55,7 @@ class ModelConfig(BaseModel):
     batch_size: int = 32
     epochs: int = 10
 
-
-    class Config:
-       """For non-defineed params, if found in config.yaml - free form, no type enforcment."""
-       extra = "allow"
+    model_config = ConfigDict(extra = "allow")
 
 
 class ProjectConfig(BaseModel):
@@ -77,9 +69,7 @@ class ProjectConfig(BaseModel):
     To override: ProjectConfig.CONFIG_RELATIVE = "custom/config.yaml"""
 
 
-    class Config:
-        """For non-defined params, if found in config.yaml - free form, no type enforcement."""
-        extra = "allow"
+    model_config = ConfigDict(extra = "allow")
 
     @classmethod  # for consistency with `load_configuration`, as both work hand-in-hand
     def root_path_resolver(cls):

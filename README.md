@@ -153,6 +153,19 @@ mamba activate your-env-name  # or use your non-mamba environment
 jupyter lab
 ```
 
+## Tests
+
+Basic pytest coverage lives under `tests/`. The initial suite includes
+`tests/test_clean.py`, which exercises the cleaning helpers in
+`src/preprocessing/clean.py` and provides placeholder `xfail` cases for
+expected behaviors that you can tighten as the pipeline stabilizes.
+
+Run tests locally:
+
+```bash
+pytest -q
+```
+
 
 ### Clean up your working directory
 
@@ -202,4 +215,3 @@ tensorflow==2.12.0-gpu
 keras-tuner==1.4.7
 Docker + NVIDIA Container Toolkit
 ```
-
