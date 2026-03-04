@@ -88,7 +88,7 @@ def dynamic_temporal_features(X: pd.DataFrame,
     """
     
     target_feature = target_feature or cnfg.preprocess.feature_groups.get("target")
-    group_feature = group_feature or cnfg.preprocess.feature_groups.get("ciy")
+    group_feature = group_feature or cnfg.preprocess.feature_groups.get("city")
 
     X_temporal = X.copy()
     

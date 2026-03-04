@@ -64,6 +64,8 @@ preprocess:
     feature_selection_policy: {mean_imp_thresh: 0, lowest_mean_thresh: 0.2, stability_cv_thresh: 1}
   target:
     logtransform: True
+  train_test_split:
+    test_weeks: 104 
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001

@@ -45,6 +45,7 @@ class PreprocesConfig(BaseModel):
     multicolinear: Dict[str, List[str]]
     wfcv: Dict[str, Dict[str, Any]]
     target: Dict[str, bool]
+    train_test_split: Dict[str, int]
 
     model_config = ConfigDict(extra = "allow")
 
