@@ -5,13 +5,13 @@ from datetime import datetime
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from typing import Iterable, Union
+from typing import Iterable
 from src.config import ProjectConfig
 
 cnfg = ProjectConfig.load_configuration()
 
 
-def load_file(path: Union[str, Path], datetime_col: str=None) -> pd.DataFrame:
+def load_file(path: str | Path, datetime_col: str=None) -> pd.DataFrame:
     """
     Load data from CSV or Parquet file into a pandas DataFrame.  
     :param path: File path as string or Path object.
@@ -34,7 +34,7 @@ def load_file(path: Union[str, Path], datetime_col: str=None) -> pd.DataFrame:
     return data
     
 
-def save_file(df: pd.DataFrame, path: Union[str, Path], overwrite=False):
+def save_file(df: pd.DataFrame, path: str | Path, overwrite: bool = False):
     """
     Save pandas DataFrame to CSV or Parquet file with automatic directory creation 
     and timestamped to avoid overwrites.

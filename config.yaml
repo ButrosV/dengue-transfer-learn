@@ -4,6 +4,7 @@ data:
     raw: "data/raw"
     intermediate: "data/intermediate"
     pics: "reporting/pics"
+    model: "models"
   files:
     raw:
       features_train: "dengue_features_train.csv" 
@@ -16,6 +17,9 @@ data:
       labels_clean: "dengue_labels_clean.parquet"
       labels_eng: "dengue_labels_eng.parquet"
       nan_mask: "dengue_nan_mask.parquet"
+    scalers:
+      X_scaler: "scaler_X.joblib"
+      y_scaler: "scaler_y.joblib"      
 preprocess:
   feature_groups:
     env_prefixes: ["ndvi_", "reanalysis_", "station_", "precipitation"]
@@ -65,7 +69,7 @@ preprocess:
   target:
     logtransform: True
   train_test_split:
-    test_weeks: 104 
+    test_weeks: 104
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001

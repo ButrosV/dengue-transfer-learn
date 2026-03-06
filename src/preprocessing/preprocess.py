@@ -1,9 +1,18 @@
+from pathlib import Path
+from typing import List, Dict, Any
+from datetime import datetime 
+import joblib
+import logging
+logging.basicConfig(level=logging.INFO)
+
 import pandas as pd
 import numpy as np
-from typing import List
+
+from sklearn.preprocessing import RobustScaler
 
 from src.config import ProjectConfig  # project config file parser
 cnfg = ProjectConfig.load_configuration()
+
 
 def encode_categorical(X: pd.DataFrame, cetegoricals: List[str] | None=None):
     """
@@ -78,4 +87,82 @@ def time_aware_group_split(X: pd.DataFrame,
     y_test = y[test_nan_mask]
     
     return X_train, X_test, y_train, y_test
+    
+
+def robust_scale_data_train(X_train: pd.DataFrame,
+                            y_train: pd.DataFrame,
+                            X_valid: pd.DataFrame,
+                            y_valid: pd.DataFrame,
+                            target_feat:str | None=None,
+                            X_scaler_path: Path | None = None,
+                            y_scaler_path: Path | None = None,
+                            overwrite_files: bool = False) -> Dict[str, Any]:
+    """
+    Fit and apply RobustScaler to training and validation data.
+    
+    Optionally save fitted scalers to disk with directory creation and handling 
+    file overwrites with timestamped filenames. Scalers are saved if 
+    BOTH X_scaler_path and y_scaler_path are provided (via params or config).
+    
+    :param X_train: Training features DataFrame.
+    :param y_train: Training targets DataFrame.
+    :param X_valid: Validation features DataFrame.
+    :param y_valid: Validation targets DataFrame.
+    :param target_feat: Target column name. Falls back to config default if None.
+    :param X_scaler_path: Path to save X scaler. Falls back to config if None.
+    :param y_scaler_path: Path to save y scaler. Falls back to config if None.
+    :param overwrite_files: If True, overwrite existing scaler files. If False (default),
+                           create timestamped versions like `scaler_X_20260306_1755.joblib`.
+    :return: Dictionary containing:
+             - ``scaled_data``: Scaled X_train_sc, X_valid_sc, y_train_sc, y_valid_sc arrays
+             - ``scalers``: Fitted scaler_X and scaler_y objects
+             - ``paths``: Actual paths where scalers were saved (timestamped if created)
+    :raises KeyError: If target_feat not found in y_train/y_valid or config paths missing.
+    """
+    directory = cnfg.data.dirs.get("model")
+    X_file = cnfg.data.files.get("X_scaler")
+    y_file = cnfg.data.files.get("y_scaler")
+    target_feat = target_feat or cnfg.preprocess.feature_groups["target"]
+    
+    X_scaler_path = X_scaler_path or (directory / X_file if X_file else None)
+    y_scaler_path = y_scaler_path or (directory / y_file if y_file else None)
+
+    rob_scaler_X = RobustScaler()
+    
+    rob_scaler_X.fit(X_train)
+    X_train_sc = rob_scaler_X.transform(X_train)
+    X_valid_sc = rob_scaler_X.transform(X_valid)
+    
+    rob_scaler_y = RobustScaler()
+
+    y_train = y_train[target_feat].values.reshape(-1,1)
+    rob_scaler_y.fit(y_train)
+    y_train_sc = rob_scaler_y.transform(y_train).ravel()
+    y_valid = y_valid[target_feat].values.reshape(-1,1)
+    y_valid_sc = rob_scaler_y.transform(y_valid).ravel()
+
+    path_names = [None, None]
+    if (X_scaler_path is not None) and (y_scaler_path is not None):
+        path_names = []
+        for path, scaler in (
+            (X_scaler_path, rob_scaler_X), (y_scaler_path, rob_scaler_y)):
+            if isinstance(path, Path):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            if path.is_file():
+                if overwrite_files:
+                    logging.info("Path file present, overwriting.")
+                else:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                    path = path.with_stem(f"{path.stem}_{timestamp}")
+                    logging.info(f"Path file present, creating new one: {path.name}.")
+            joblib.dump(scaler, path)
+            path_names.append(path)
+        
+    paths = {"X_scaler_path": path_names[0], "y_scaler_path": path_names[1]}
+    scalers = {"scaler_X": rob_scaler_X, "scaler_y": rob_scaler_y}
+    scaled_data = {"X_train_sc": X_train_sc, "X_valid_sc": X_valid_sc,
+                  "y_train_sc": y_train_sc, "y_valid_sc": y_valid_sc}
+
+    return {"scaled_data": scaled_data,
+            "scalers": scalers, "paths": paths}
     
