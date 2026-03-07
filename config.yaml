@@ -70,6 +70,10 @@ preprocess:
     logtransform: True
   train_test_split:
     test_weeks: 104
+  windowing:
+    input_weeks: 52
+    output_weeks: 1
+    stride: 1
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001
