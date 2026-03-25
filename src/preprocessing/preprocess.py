@@ -89,7 +89,7 @@ def time_aware_group_split(X: pd.DataFrame,
     return X_train, X_test, y_train, y_test
     
 
-def robust_scale_data_train(X_train: pd.DataFrame,
+def robust_scale_data(X_train: pd.DataFrame,
                             y_train: pd.DataFrame,
                             X_valid: pd.DataFrame,
                             y_valid: pd.DataFrame,
