@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 from src.config import ProjectConfig  # project config file parser
 cnfg = ProjectConfig.load_configuration()
@@ -26,6 +27,10 @@ def make_windows(X: np.ndarray,
     :return: Tuple of zero-copy window arrays:
              - ``X_windows``: Shape `(n_windows, window_size, n_features)`
              - ``y_windows``: Shape `(n_windows, horizon)`
+             
+    Note:
+        The number of X and y windows may differ due to horizon offset. Both are
+        truncated to the same length (`cutoff`) to ensure proper alignment.
     """
     settings = cnfg.preprocess.windowing
     window_size = window_size or settings["input_weeks"]
@@ -41,3 +46,39 @@ def make_windows(X: np.ndarray,
     cuttof = min(X_windows.shape[0], y_windows.shape[0])
 
     return X_windows[:cuttof], y_windows[:cuttof]
+    
+    
+def make_tf_windows(X: np.ndarray,
+                 y: np.ndarray,
+                 batch_size: int | None = None,
+                 shuffle: bool = True
+                ) -> tf.data.Dataset:
+    """
+    Create batched tf.data.Dataset from pre-windowed time series arrays for LSTM training.
+    Convert NumPy window arrays (ie from `make_windows()`) to optimized TensorFlow Dataset.
+    
+    :param X: Pre-windowed input features array of shape `(n_windows, window_size, n_features)`.
+    :param y: Pre-windowed target array of shape `(n_windows, horizon)`.
+    :param batch_size: Number of windows per batch. Falls back to config (default: 32).
+    :param shuffle: Whether to shuffle windows between epochs. Defaults to True.
+    
+    :return: Batched tf.data.Dataset yielding tuples `(batch_X, batch_y)` where:
+             - `batch_X`: Shape `(batch_size, window_size, n_features)`
+             - `batch_y`: Shape `(batch_size, horizon)`
+             
+    Note:
+        - Expects `X`, `y` from `make_windows()` - already properly aligned and truncated.
+        - No `drop_remainder=True` (enable if LSTM shape mismatch occurs).
+        - Includes prefetch for CPU/GPU performance optimization.
+    """
+    batch_size = batch_size or cnfg.preprocess.windowing["batch_size"]
+
+    tf_dataset = tf.data.Dataset.from_tensor_slices(tensors=(X, y))
+
+    if shuffle:
+        tf_dataset = tf_dataset.shuffle(buffer_size=len(X))
+            
+    tf_dataset = tf_dataset.batch(batch_size=batch_size)
+
+    return tf_dataset.prefetch(tf.data.AUTOTUNE)
+    

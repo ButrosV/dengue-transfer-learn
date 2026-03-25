@@ -74,6 +74,7 @@ preprocess:
     input_weeks: 52
     output_weeks: 1
     stride: 1
+    batch_size: 32
 # populate model section with real values or adjust ./src/config.py -> ModelConfig, otherwise Pydantic is complaining
 model:
   learning_rate: 0.001
