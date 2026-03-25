@@ -48,30 +48,41 @@ def make_windows(X: np.ndarray,
     return X_windows[:cuttof], y_windows[:cuttof]
     
     
-def make_tf_windows(X: np.ndarray,
+def make_tf_dataset(X: np.ndarray,
                  y: np.ndarray,
                  batch_size: int | None = None,
                  shuffle: bool = True
                 ) -> tf.data.Dataset:
     """
-    Create batched tf.data.Dataset from pre-windowed time series arrays for LSTM training.
-    Convert NumPy window arrays (ie from `make_windows()`) to optimized TensorFlow Dataset.
+    Convert NumPy arrays into a batched `tf.data.Dataset` suitable for LSTM training.
     
-    :param X: Pre-windowed input features array of shape `(n_windows, window_size, n_features)`.
-    :param y: Pre-windowed target array of shape `(n_windows, horizon)`.
-    :param batch_size: Number of windows per batch. Falls back to config (default: 32).
-    :param shuffle: Whether to shuffle windows between epochs. Defaults to True.
+    Handles both windowed sequences (from `make_windows`) and pointwise (1→1) data.
+    Adds a dummy timestep dimension for 2D inputs if needed.
     
-    :return: Batched tf.data.Dataset yielding tuples `(batch_X, batch_y)` where:
-             - `batch_X`: Shape `(batch_size, window_size, n_features)`
-             - `batch_y`: Shape `(batch_size, horizon)`
-             
-    Note:
-        - Expects `X`, `y` from `make_windows()` - already properly aligned and truncated.
-        - No `drop_remainder=True` (enable if LSTM shape mismatch occurs).
-        - Includes prefetch for CPU/GPU performance optimization.
+    :param X: Input features array. Shape can be:
+              - `(n_windows, window_size, n_features)` for windowed sequences
+              - `(n_samples, n_features)` for tabular 2D data
+    :param y: Target array. Shape can be:
+              - `(n_windows, horizon)` for windowed sequences
+              - `(n_samples,)` or `(n_samples, 1)` for tabular 2D data
+    :param batch_size: Number of samples per batch. Defaults to config value (e.g., 32).
+    :param shuffle: Whether to shuffle samples/windows between epochs. Defaults to True.
+
+    :return: A `tf.data.Dataset` yielding tuples `(batch_X, batch_y)`:
+             - `batch_X`: `(batch_size, window_size, n_features)` (or `(batch_size, 1, n_features)` for 1→1)
+             - `batch_y`: `(batch_size, horizon)` (or `(batch_size, 1)` for 1→1)
+
+    Notes:
+        - Does **not** use `drop_remainder=True` by default; enable if exact batch sizes are required for LSTM.
+        - Prepares data efficiently for GPU/CPU via `.prefetch(tf.data.AUTOTUNE)`.
+        - Compatible with both windowed sequence datasets and non-windowed 1→1 datasets.
     """
     batch_size = batch_size or cnfg.preprocess.windowing["batch_size"]
+
+    if X.ndim == 2:
+        X = X.copy()[:, np.newaxis, :]
+    if y.ndim == 1:
+        y = y.copy()[:, np.newaxis]
 
     tf_dataset = tf.data.Dataset.from_tensor_slices(tensors=(X, y))
 
