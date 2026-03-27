@@ -147,11 +147,11 @@ def pipe_clean(manual_dirs: Dict[str, Path] | None=None,
     X_clean, y_clean = drop_nan_rows(X=X_clean, y=y_clean)
     X_clean, df_nan_mask = median_groupwise_impute(X=X_clean)
 
-    X_save_path = save_file(df=X_clean, path=dirs["intermediate"] / filenames["features_clean"],
+    X_save_path = save_file(data=X_clean, path=dirs["intermediate"] / filenames["features_clean"],
                             overwrite=overwrite_files)
-    y_save_path = save_file(df=y_clean, path=dirs["intermediate"] / filenames["labels_clean"],
+    y_save_path = save_file(data=y_clean, path=dirs["intermediate"] / filenames["labels_clean"],
                             overwrite=overwrite_files)
-    nan_mask_save_path = save_file(df=df_nan_mask, path=dirs["intermediate"] / filenames["nan_mask"],
+    nan_mask_save_path = save_file(data=df_nan_mask, path=dirs["intermediate"] / filenames["nan_mask"],
                                    overwrite=overwrite_files)
     
     return {"X_clean_save_path": X_save_path,

@@ -3,6 +3,7 @@ data:
     main: "data"
     raw: "data/raw"
     intermediate: "data/intermediate"
+    processed: "data/processed"
     pics: "reporting/pics"
     model: "models"
   files:
@@ -17,6 +18,11 @@ data:
       labels_clean: "dengue_labels_clean.parquet"
       labels_eng: "dengue_labels_eng.parquet"
       nan_mask: "dengue_nan_mask.parquet"
+    processed:
+      X_train: "X_train.npy"
+      X_valid: "X_valid.npy"
+      y_train: "y_train.npy"
+      y_valid: "y_valid.npy"
     scalers:
       X_scaler: "scaler_X.joblib"
       y_scaler: "scaler_y.joblib"      

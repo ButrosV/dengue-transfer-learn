@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import joblib
 
@@ -12,6 +13,8 @@ from typing import Iterable
 from src.config import ProjectConfig
 
 cnfg = ProjectConfig.load_configuration()
+DIRS = cnfg.data.dirs
+FILES = cnfg.data.files
 
 
 def load_file(path: str | Path, datetime_col: str=None) -> pd.DataFrame:
@@ -37,20 +40,19 @@ def load_file(path: str | Path, datetime_col: str=None) -> pd.DataFrame:
     return data
     
 
-def save_file(df: pd.DataFrame, path: str | Path, overwrite: bool = False):
+def save_file(data: pd.DataFrame | np.ndarray,
+              path: str | Path, overwrite: bool = False):
     """
-    Save pandas DataFrame to CSV or Parquet file with automatic directory creation 
-    and timestamped to avoid overwrites.
+    Save pandas DataFrame or NumPy array to CSV, Parquet or .npy file with 
+    automatic directory creation and timestamped to avoid overwrites.
     :param df: DataFrame to save.
-    :param path: File path as string or Path object (.csv, .parquet, or .pqt).
+    :param path: File path as string or Path object (.csv, .parquet, .pqt, .npy).
     :param overwrite: If True, overwrite existing file. If False (default), 
                       create timestamped version like `file_20260201_1947.csv`.
     :return: Final Path object where file was saved.
-    :raises ValueError: If DataFrame is empty or file format unsupported.
+    :raises ValueError: Empty data, unsupported format, or wrong data type.
     """
     path=Path(path)
-    if df.empty:
-        raise ValueError("Attemting to save empty DataFrame")
     if not path.parent.is_dir():
         logging.info("No directory for provided path. Creating one.")
         path.parent.mkdir(parents=True)
@@ -61,14 +63,29 @@ def save_file(df: pd.DataFrame, path: str | Path, overwrite: bool = False):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M")
             path = path.with_stem(f"{path.stem}_{timestamp}")
             logging.info(f"Path file present, creating new one: {path.name}.")
-            
-    if path.suffix.lower() == ".csv":
-        df.to_csv(path, index=False)
-    elif path.suffix.lower() in [".parquet", ".pqt"]:
-        df.to_parquet(path, index=False, engine='fastparquet')
+    
+    if isinstance(data, pd.DataFrame):
+        if data.empty:
+            raise ValueError("Attemting to save empty DataFrame")
+        if path.suffix.lower() == ".csv":
+            data.to_csv(path, index=False)
+        elif path.suffix.lower() in [".parquet", ".pqt"]:
+            data.to_parquet(path, index=False, engine='fastparquet')
+        else:
+            raise ValueError(f"Unsupported file format: {path.suffix}.")
+
+    elif isinstance(data, np.ndarray):
+        if data.size == 0:
+            raise ValueError("Attempting to save empty NumPy array")
+        if path.suffix.lower() == '.npy':
+            np.save(path, data, allow_pickle=False)
+        else:
+            raise ValueError(f"Unsupported file format: {path.suffix}.")
+    
     else:
-        raise ValueError(f"Unsupported file format: {path.suffix}")
-    logging.info(f"Saved {df.shape} shaped data as {path.name}")  # remove .name for non-public notebooks
+        raise ValueError("Input data should be NumPy array or Pandas DataFrame.")
+        
+    logging.info(f"Saved {data.shape} shaped data as {path.name}")  # remove .name for non-public notebooks
     return path
     
      
@@ -101,11 +118,11 @@ def load_scaler(scaler_type: str | None = None,
     :return: Fitted RobustScaler instance or None if path invalid/missing.
     """
     if scaler_path is None:
-        directory = cnfg.data.dirs.get("model")
+        directory = DIRS.get("model")
         if scaler_type == "X":
-            scaler_file = cnfg.data.files.get("X_scaler")
+            scaler_file = FILES.get("X_scaler")
         elif scaler_type == "y":
-            scaler_file = cnfg.data.files.get("y_scaler")
+            scaler_file = FILES.get("y_scaler")
         else:
             raise ValueError("if no scaler_path provided, scaler_type must be 'X' or 'y'.")
 

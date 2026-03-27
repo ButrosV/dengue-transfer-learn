@@ -223,7 +223,7 @@ def pipe_select(
         X_select = auto_selector_output["data"]
         wfcv_removed_features = auto_selector_output["removed_features"]
 
-    X_save_path = save_file(df=X_select, path=dirs["intermediate"] / 
+    X_save_path = save_file(data=X_select, path=dirs["intermediate"] / 
                             filenames["features_selected"],
                             overwrite=overwrite_files)
 

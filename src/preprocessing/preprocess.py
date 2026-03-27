@@ -160,8 +160,8 @@ def robust_scale_data(X_train: pd.DataFrame,
         
     paths = {"X_scaler_path": path_names[0], "y_scaler_path": path_names[1]}
     scalers = {"scaler_X": rob_scaler_X, "scaler_y": rob_scaler_y}
-    scaled_data = {"X_train_sc": X_train_sc, "X_valid_sc": X_valid_sc,
-                  "y_train_sc": y_train_sc, "y_valid_sc": y_valid_sc}
+    scaled_data = {"X_train": X_train_sc, "X_valid": X_valid_sc,
+                  "y_train": y_train_sc, "y_valid": y_valid_sc}
 
     return {"scaled_data": scaled_data,
             "scalers": scalers, "paths": paths}
