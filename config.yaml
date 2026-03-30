@@ -23,6 +23,7 @@ data:
       X_valid: "X_valid.npy"
       y_train: "y_train.npy"
       y_valid: "y_valid.npy"
+      test_mask_groups: "test_mask_groups.npy"
     scalers:
       X_scaler: "scaler_X.joblib"
       y_scaler: "scaler_y.joblib"      

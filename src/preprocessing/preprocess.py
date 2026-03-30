@@ -46,7 +46,7 @@ def time_aware_group_split(X: pd.DataFrame,
                            group_feat:str | None=None,
                            test_size:int | None=None,
                            group_aware_frame: pd.DataFrame | None=None
-                          ) -> tuple:
+                          ) -> Dict[str, Any]:
     """
     Generate time-aware train-test split preserving group structure (e.g., city, region).
     
@@ -62,7 +62,9 @@ def time_aware_group_split(X: pd.DataFrame,
                       If None, uses default from configuration (e.g., test_weeks).
     :param group_aware_frame: DataFrame used for grouping logic. Defaults to `X`. 
                               Use original pre-dummy data when `X` contains dummy variables.
-    :return: Tuple of (X_train, X_test, y_train, y_test) DataFrames/Series.
+    :return: Dictionary containing:
+             - "split_data": Tuple of (X_train, X_test, y_train, y_test) DataFrames/Series
+             - "test_mask_groups": Boolean mask array indicating test set rows per group
     """
     group_feat = group_feat or cnfg.preprocess.feature_groups.get("city")
     test_size = test_size or cnfg.preprocess.train_test_split["test_weeks"]
@@ -86,7 +88,8 @@ def time_aware_group_split(X: pd.DataFrame,
     y_train = y[~test_nan_mask]
     y_test = y[test_nan_mask]
     
-    return X_train, X_test, y_train, y_test
+    return {"split_data": (X_train, X_test, y_train, y_test),
+            "test_mask_groups": test_nan_mask}
     
 
 def robust_scale_data(X_train: pd.DataFrame,

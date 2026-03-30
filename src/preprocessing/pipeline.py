@@ -13,13 +13,12 @@ from src.preprocessing.engineer.pipeline import pipe_engineer
 from src.preprocessing.select import pipe_select
 from src.preprocessing.preprocess import time_aware_group_split, robust_scale_data
 from src.utils.utils import save_file
+
+from src.schemas.preprocessing import PreprocessOutput
                                 
 cnfg = ProjectConfig.load_configuration()
 DIRS = cnfg.data.dirs
 FILES = cnfg.data.files
-
-
-
 
 
 def full_preprocess_pipe(
@@ -28,12 +27,21 @@ def full_preprocess_pipe(
     grouping_feature: str | None = None,
     target: str | None = None,
     logtransform_target: bool | None = None,
-    overwrite_files: bool=False) -> Dict[str, Any]:
+    overwrite_files: bool=False) -> PreprocessOutput:
     """
     Complete dengue preprocessing pipeline: clean → engineer → select → split → scale → save.
     
     Orchestrates dataset preparation with intermediate file persistence
     and time-aware group splits for city-wise transfer learning.
+    
+    Pipeline stages:
+        1. Data cleaning (`pipe_clean`)
+        2. Feature engineering (`pipe_engineer`)
+        3. Feature selection via WFCV (`pipe_select`)
+        4. Time-aware group split (`time_aware_group_split`)
+        5. Log transformation (optional)
+        6. Robust scaling (`robust_scale_data`)
+        7. Artifact saving (scaled arrays + group mask + scalers)
     
     :param manual_dirs: Override config data directories {'raw', 'intermediate', 'processed', 'model'}.
     :param manual_files: Override config filenames for all pipeline stages.
@@ -42,12 +50,13 @@ def full_preprocess_pipe(
     :param logtransform_target: Apply log1p() to targets before scaling. Defaults to config.
     :param overwrite_files: Overwrite existing artifacts. Default False (timestamped backups).
     
-    :return: Complete processed dataset with paths:
-        - `scaled_data`: {'X_train', 'X_valid', 'y_train', 'y_valid'} NumPy arrays (scaled)
-        - `data_paths`: Save paths for all scaled arrays (.npy/.parquet)
-        - `scalers`: Fitted RobustScaler objects for X/y inversion
-        - `scaler_paths`: Paths where scalers saved (.joblib)
-        - `grouping_feature`: Preserved city Series aligned with train/valid splits
+    :return: `PreprocessOutput` object containing:
+        - scaled_data: {'X_train', 'X_valid', 'y_train', 'y_valid'} NumPy arrays (scaled)
+        - data_paths: Save paths for all scaled arrays and test split group aware mask (.npy/.parquet)
+        - scalers: Fitted RobustScaler objects for X/y inversion
+        - scaler_paths: Paths where scalers saved (.joblib)
+        - grouping_feature: Tuple of (grouped_train, grouped_valid) DataFrames
+            containing the grouping feature (e.g., city labels).
     
     :raises AssertionError: Index misalignment, empty splits, NaN values detected.
 
@@ -88,10 +97,14 @@ def full_preprocess_pipe(
     if logtransform_target:
         y_selected[target] = np.log1p(y_selected[target])
         
-    X_train, X_valid, y_train, y_valid = time_aware_group_split(
+    split_outpout = time_aware_group_split(
         X=selected_data["X_select_data"],
         y=y_selected,
         group_aware_frame=groups)
+        
+    X_train, X_valid, y_train, y_valid = split_outpout["split_data"]
+    grouped_train = groups[~split_outpout["test_mask_groups"]]
+    grouped_valid = groups[split_outpout["test_mask_groups"]]
 
     assert len(X_train) > 0 and len(X_valid) > 0
     assert not X_train.isna().any().any()
@@ -108,7 +121,11 @@ def full_preprocess_pipe(
                         overwrite=overwrite_files)
             data_paths[name + "_save_path"] = save_path
     
-    return {"scaled_data": scaler_output["scaled_data"], "data_paths": data_paths,
-            "scalers": scaler_output["scalers"], "scaler_paths": scaler_output["paths"],
-           "grouping_feature": groups}
+    data_paths["test_mask_groups"] = save_file(data=split_outpout["test_mask_groups"],
+                                               path= dirs["processed"] / filenames["test_mask_groups"],
+                                               overwrite=overwrite_files)
+    
+    return PreprocessOutput(scaled_data=scaler_output["scaled_data"], data_paths=data_paths,
+            scalers=scaler_output["scalers"], scaler_paths=scaler_output["paths"],
+           grouping_masks=(grouped_train, grouped_valid))
            
