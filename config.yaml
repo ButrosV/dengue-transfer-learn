@@ -6,6 +6,7 @@ data:
     processed: "data/processed"
     pics: "reporting/pics"
     model: "models"
+    evaluation: "models/evaluation"
   files:
     raw:
       features_train: "dengue_features_train.csv" 
@@ -26,7 +27,11 @@ data:
       test_mask_groups: "test_mask_groups.npy"
     scalers:
       X_scaler: "scaler_X.joblib"
-      y_scaler: "scaler_y.joblib"      
+      y_scaler: "scaler_y.joblib"
+    models:
+      lgbm_suffix: "lgbm_model.pkl"
+      lstm_suffix: "lstm_model.h5"
+      evaluation: "model_performance.csv"
 preprocess:
   feature_groups:
     env_prefixes: ["ndvi_", "reanalysis_", "station_", "precipitation"]
